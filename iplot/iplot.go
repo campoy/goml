@@ -58,6 +58,38 @@ func Line(y []float64, options ...Option) *plot.Plot {
 	return p
 }
 
+// A Range represents a range of values with steps.
+type Range struct {
+	From, To float64
+	Step     float64
+}
+
+func NewRange(from, to float64, steps int) Range {
+	return Range{
+		From: from,
+		To:   to,
+		Step: (to - from) / float64(steps),
+	}
+}
+
+// Steps returns how many total steps there are in between From and To.
+func (r Range) Steps() int { return int((r.To - r.From) / r.Step) }
+
+// Map returns the value of the nth step between From and To.
+func (r Range) Map(n int) float64 { return r.From + float64(n)*r.Step }
+
+// Grid3D can be used as a plotter.XYZer for HeatMap and Countour.
+type Grid3D struct {
+	XRange Range
+	YRange Range
+	F      func(x, y float64) float64
+}
+
+func (g Grid3D) Dims() (int, int)   { return g.XRange.Steps(), g.YRange.Steps() }
+func (g Grid3D) X(c int) float64    { return g.XRange.Map(c) }
+func (g Grid3D) Y(c int) float64    { return g.YRange.Map(c) }
+func (g Grid3D) Z(c, r int) float64 { return g.F(g.X(c), g.Y(r)) }
+
 // Scatter prints a scatter graph of the given points
 func Scatter(x, y *mat64.Vector, options ...Option) *plot.Plot {
 	p, err := plot.New()

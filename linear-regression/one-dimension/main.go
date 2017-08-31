@@ -56,11 +56,16 @@ func main() {
 	))
 
 	{
+		fmt.Println("optimization space and traject")
 		plot, _ := plot.New()
 		plot.Add(plotter.NewContour(
-			grid{64, -10, 10, -1, 2, X, y, computeCost},
-			nil,
-			palette.Heat(16, 1)))
+			iplot.Grid3D{
+				XRange: iplot.NewRange(-8, 5, 100),
+				YRange: iplot.NewRange(0, 3, 100),
+				F: func(a, b float64) float64 {
+					return computeCost(X, y, mat64.NewDense(2, 1, []float64{a, b}))
+				},
+			}, nil, palette.Heat(16, 1)))
 		var xys plotter.XYs
 		for _, theta := range thetas {
 			xys = append(xys, struct{ X, Y float64 }{theta[0], theta[1]})
@@ -69,6 +74,9 @@ func main() {
 		scatter.Shape = draw.CrossGlyph{}
 		scatter.Radius = 0.1
 		plot.Add(scatter)
+		plot.Title.Text = "Optimization path"
+		plot.X.Label.Text = "theta0"
+		plot.Y.Label.Text = "theta1"
 		iplot.Print(os.Stdout, plot)
 	}
 
@@ -89,22 +97,6 @@ func main() {
 		return theta.At(0, 0) + theta.At(1, 0)*x
 	}))
 	iplot.Print(os.Stdout, p)
-}
-
-type grid struct {
-	scale      int
-	xFrom, xTo float64
-	yFrom, yTo float64
-	x          *mat64.Dense
-	y          *mat64.Dense
-	f          func(X, y, theta *mat64.Dense) float64
-}
-
-func (g grid) Dims() (int, int) { return g.scale, g.scale }
-func (g grid) X(c int) float64  { return g.xFrom + float64(c)*(g.xTo-g.xFrom)/float64(g.scale) }
-func (g grid) Y(c int) float64  { return g.yFrom + float64(c)*(g.yTo-g.yFrom)/float64(g.scale) }
-func (g grid) Z(c, r int) float64 {
-	return computeCost(g.x, g.y, mat64.NewDense(2, 1, []float64{g.X(c), g.Y(r)}))
 }
 
 // computeCost computes the cost of using theta as the parameter for linear
