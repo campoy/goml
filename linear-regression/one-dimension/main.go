@@ -3,15 +3,22 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/campoy/goml/iplot"
 	"github.com/campoy/goml/parse"
 	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/plot"
+	"github.com/gonum/plot/palette"
 	"github.com/gonum/plot/plotter"
+	"github.com/gonum/plot/vg/draw"
 )
 
 func main() {
+	rand.Seed(time.Now().Unix())
+
 	mat, err := parse.Float64Matrix("data.txt")
 	if err != nil {
 		log.Fatal(err)
@@ -31,11 +38,12 @@ func main() {
 		iplot.WithYLabel("Profit in $10,000s"),
 	))
 
-	theta := mat64.NewDense(2, 1, make([]float64, 2))
+	theta := mat64.NewDense(2, 1, []float64{rand.Float64(), rand.Float64()})
+
 	cost := computeCost(X, y, theta)
 	fmt.Printf("initial cost is %f\n", cost)
 
-	theta, costs := gradientDescent(X, y, theta, 0.01, 1500)
+	theta, thetas, costs := gradientDescent(X, y, theta, 0.01, 1500)
 	fmt.Printf("after 1500 steps of gradient descent with learning rate 0.01\n")
 	fmt.Printf("theta: %v\n", theta.RawMatrix().Data)
 
@@ -46,6 +54,23 @@ func main() {
 		iplot.WithTitle("cost over time"),
 		iplot.WithXLabel("number of iterations"),
 	))
+
+	{
+		plot, _ := plot.New()
+		plot.Add(plotter.NewContour(
+			grid{64, -10, 10, -1, 2, X, y, computeCost},
+			nil,
+			palette.Heat(16, 1)))
+		var xys plotter.XYs
+		for _, theta := range thetas {
+			xys = append(xys, struct{ X, Y float64 }{theta[0], theta[1]})
+		}
+		scatter, _ := plotter.NewScatter(xys)
+		scatter.Shape = draw.CrossGlyph{}
+		scatter.Radius = 0.1
+		plot.Add(scatter)
+		iplot.Print(os.Stdout, plot)
+	}
 
 	pred := new(mat64.Dense)
 	pred.Mul(mat64.NewDense(1, 2, []float64{1, 3.5}), theta)
@@ -66,6 +91,22 @@ func main() {
 	iplot.Print(os.Stdout, p)
 }
 
+type grid struct {
+	scale      int
+	xFrom, xTo float64
+	yFrom, yTo float64
+	x          *mat64.Dense
+	y          *mat64.Dense
+	f          func(X, y, theta *mat64.Dense) float64
+}
+
+func (g grid) Dims() (int, int) { return g.scale, g.scale }
+func (g grid) X(c int) float64  { return g.xFrom + float64(c)*(g.xTo-g.xFrom)/float64(g.scale) }
+func (g grid) Y(c int) float64  { return g.yFrom + float64(c)*(g.yTo-g.yFrom)/float64(g.scale) }
+func (g grid) Z(c, r int) float64 {
+	return computeCost(g.x, g.y, mat64.NewDense(2, 1, []float64{g.X(c), g.Y(r)}))
+}
+
 // computeCost computes the cost of using theta as the parameter for linear
 // regression to fit the data points in X and y.
 func computeCost(X, y, theta *mat64.Dense) float64 {
@@ -79,8 +120,9 @@ func computeCost(X, y, theta *mat64.Dense) float64 {
 
 // gradientDescent performs gradient descent to learn theta returns the updated
 // theta after taking iters gradient steps with learning rate alpha.
-func gradientDescent(X, y, theta *mat64.Dense, alpha float64, iters int) (*mat64.Dense, []float64) {
+func gradientDescent(X, y, theta *mat64.Dense, alpha float64, iters int) (*mat64.Dense, [][]float64, []float64) {
 	costs := make([]float64, 0, iters)
+	thetas := make([][]float64, 0, iters)
 
 	m, _ := X.Dims()
 	for i := 0; i < iters; i++ {
@@ -95,7 +137,8 @@ func gradientDescent(X, y, theta *mat64.Dense, alpha float64, iters int) (*mat64
 		theta.Sub(theta, grad)
 
 		costs = append(costs, computeCost(X, y, theta))
+		thetas = append(thetas, []float64{theta.At(0, 0), theta.At(1, 0)})
 	}
 
-	return theta, costs
+	return theta, thetas, costs
 }
