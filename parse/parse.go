@@ -5,12 +5,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/gonum/matrix/mat64"
 	"github.com/pkg/errors"
+	"gonum.org/v1/gonum/mat"
 )
 
 // Float64Matrix parses a CSV encoded file and returns a matrix of float64 values.
-func Float64Matrix(path string) (mat64.Matrix, error) {
+func Float64Matrix(path string) (mat.Matrix, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read %s", path)
@@ -33,6 +33,6 @@ func Float64Matrix(path string) (mat64.Matrix, error) {
 		}
 	}
 
-	return mat64.NewDense(len(recs), len(recs[0]), data), nil
+	return mat.NewDense(len(recs), len(recs[0]), data), nil
 
 }
