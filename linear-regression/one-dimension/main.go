@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image/color"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/campoy/tools/imgcat"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/palette"
 	"github.com/gonum/plot/plotter"
@@ -15,13 +17,17 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/campoy/goml/iplot"
-	"github.com/campoy/goml/iplot/imgcat"
 	"github.com/campoy/goml/iplot/xyer"
 	"github.com/campoy/goml/parse"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
+
+	enc, err := imgcat.NewEncoder(os.Stdout, imgcat.Width(imgcat.Cells(100)), imgcat.Inline(true))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	data, err := parse.Float64Matrix("data.txt")
 	if err != nil {
@@ -37,6 +43,7 @@ func main() {
 	y := mat.NewDense(m, 1, mat.Col(nil, 1, data))
 
 	{ // plot scatter of the points
+		fmt.Println("Dataset plot")
 		p, _ := plot.New()
 		s, _ := plotter.NewScatter(xyer.FromMatrices(X.ColView(1), y))
 		p.Add(s)
@@ -45,7 +52,7 @@ func main() {
 		p.Title.Text = "Population and Profit"
 		p.X.Label.Text = "Population of City in 10,000s"
 		p.Y.Label.Text = "Profit in $10,000s"
-		print(p)
+		print(enc, p)
 	}
 
 	theta := mat.NewDense(2, 1, make([]float64, 2))
@@ -67,7 +74,7 @@ func main() {
 		l.Color = color.RGBA{R: 255, A: 255}
 		p.Title.Text = "Cost over time"
 		p.X.Label.Text = "number of iterations"
-		print(p)
+		print(enc, p)
 	}
 
 	{ // plot optimization space
@@ -86,7 +93,7 @@ func main() {
 		p.Title.Text = "Optimization path"
 		p.X.Label.Text = "theta0"
 		p.Y.Label.Text = "theta1"
-		print(p)
+		print(enc, p)
 	}
 
 	pred := new(mat.Dense)
@@ -109,7 +116,7 @@ func main() {
 		p.Add(plotter.NewFunction(func(x float64) float64 {
 			return theta.At(0, 0) + theta.At(1, 0)*x
 		}))
-		print(p)
+		print(enc, p)
 	}
 }
 
@@ -148,13 +155,18 @@ func gradientDescent(X, y, theta *mat.Dense, alpha, epsilon float64) (*mat.Dense
 	return theta, thetas, costs
 }
 
-func print(p *plot.Plot) {
-	w := imgcat.New(os.Stdout, "100")
-	defer w.Close()
-
+func print(enc *imgcat.Encoder, p *plot.Plot) {
 	wt, err := p.WriterTo(512, 256, "png")
 	if err != nil {
 		log.Fatalf("could not print plot: %v", err)
 	}
-	wt.WriteTo(w)
+	buf := new(bytes.Buffer)
+	if _, err := wt.WriteTo(buf); err != nil {
+		log.Fatalf("could not write to buffer: %v", err)
+	}
+	if err := enc.Encode(buf); err != nil {
+		log.Fatalf("could not encode: %v", err)
+	}
+	fmt.Println("press enter to continue ...")
+	fmt.Scanln()
 }
