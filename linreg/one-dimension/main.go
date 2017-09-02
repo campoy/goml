@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"image/color"
 	"log"
@@ -18,18 +17,20 @@ import (
 
 	"github.com/campoy/goml/iplot"
 	"github.com/campoy/goml/iplot/xyer"
-	"github.com/campoy/goml/parse"
+	"github.com/campoy/goml/linreg"
+	"github.com/campoy/goml/util"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	enc, err := imgcat.NewEncoder(os.Stdout, imgcat.Width(imgcat.Cells(100)), imgcat.Inline(true))
+	enc, err := imgcat.NewEncoder(os.Stdout,
+		imgcat.Width(imgcat.Cells(100)), imgcat.Inline(true))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	data, err := parse.Float64Matrix("data.txt")
+	data, err := util.ParseMatrix("data.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,20 +53,19 @@ func main() {
 		p.Title.Text = "Population and Profit"
 		p.X.Label.Text = "Population of City in 10,000s"
 		p.Y.Label.Text = "Profit in $10,000s"
-		print(enc, p)
+		util.PrintPlot(enc, p)
 	}
 
 	theta := mat.NewDense(2, 1, make([]float64, 2))
 
-	cost := computeCost(X, y, theta)
+	cost := linreg.ComputeCost(X, y, theta)
 	fmt.Printf("initial cost is %f\n", cost)
 
 	alpha := 0.01
-	epsilon := 1e-8
-	theta, thetas, costs := gradientDescent(X, y, theta, alpha, epsilon)
+	theta, thetas, costs := linreg.GradientDescent(X, y, theta, alpha, 1500)
 	fmt.Printf("took %d steps\n", len(thetas))
-	fmt.Printf("theta: %v\n", theta.RawMatrix().Data)
-	fmt.Printf("current cost is %f\n", computeCost(X, y, theta))
+	util.PrintMatrix("theta", theta)
+	fmt.Printf("current cost is %f\n", linreg.ComputeCost(X, y, theta))
 
 	{ // plot a line with the costs
 		p, _ := plot.New()
@@ -74,7 +74,7 @@ func main() {
 		l.Color = color.RGBA{R: 255, A: 255}
 		p.Title.Text = "Cost over time"
 		p.X.Label.Text = "number of iterations"
-		print(enc, p)
+		util.PrintPlot(enc, p)
 	}
 
 	{ // plot optimization space
@@ -83,7 +83,7 @@ func main() {
 		p.Add(plotter.NewContour(
 			iplot.GridXYZ(iplot.NewRange(-8, 5, 100), iplot.NewRange(0, 3, 100),
 				func(a, b float64) float64 {
-					return computeCost(X, y, mat.NewDense(2, 1, []float64{a, b}))
+					return linreg.ComputeCost(X, y, mat.NewDense(2, 1, []float64{a, b}))
 				}),
 			nil, palette.Heat(16, 1)))
 		s, _ := plotter.NewScatter(xyer.FromSliceOfSlices(thetas))
@@ -93,7 +93,7 @@ func main() {
 		p.Title.Text = "Optimization path"
 		p.X.Label.Text = "theta0"
 		p.Y.Label.Text = "theta1"
-		print(enc, p)
+		util.PrintPlot(enc, p)
 	}
 
 	pred := new(mat.Dense)
@@ -116,57 +116,6 @@ func main() {
 		p.Add(plotter.NewFunction(func(x float64) float64 {
 			return theta.At(0, 0) + theta.At(1, 0)*x
 		}))
-		print(enc, p)
+		util.PrintPlot(enc, p)
 	}
-}
-
-// computeCost computes the cost of using theta as the parameter for linear
-// regression to fit the data points in X and y.
-func computeCost(X, y, theta *mat.Dense) float64 {
-	m, _ := X.Dims()
-	h := new(mat.Dense)
-	h.Mul(X, theta)
-	h.Sub(h, y)
-	h.Apply(func(i, j int, v float64) float64 { return v * v }, h)
-	return mat.Sum(h) / float64(2*m)
-}
-
-// gradientDescent performs gradient descent to learn theta returns the updated
-// theta after taking iters gradient steps with learning rate alpha.
-func gradientDescent(X, y, theta *mat.Dense, alpha, epsilon float64) (*mat.Dense, [][]float64, []float64) {
-	var costs []float64
-	var thetas [][]float64
-
-	m, _ := X.Dims()
-	for len(costs) < 2 || costs[len(costs)-2]-costs[len(costs)-1] > epsilon {
-		h := new(mat.Dense)
-		h.Mul(X, theta) // (X * theta - y) * X
-		h.Sub(h, y)
-
-		grad := new(mat.Dense) // -alpha/m (h . X)
-		grad.Mul(X.T(), h)
-		grad.Scale(alpha/float64(m), grad)
-		theta.Sub(theta, grad)
-
-		costs = append(costs, computeCost(X, y, theta))
-		thetas = append(thetas, []float64{theta.At(0, 0), theta.At(1, 0)})
-	}
-
-	return theta, thetas, costs
-}
-
-func print(enc *imgcat.Encoder, p *plot.Plot) {
-	wt, err := p.WriterTo(512, 256, "png")
-	if err != nil {
-		log.Fatalf("could not print plot: %v", err)
-	}
-	buf := new(bytes.Buffer)
-	if _, err := wt.WriteTo(buf); err != nil {
-		log.Fatalf("could not write to buffer: %v", err)
-	}
-	if err := enc.Encode(buf); err != nil {
-		log.Fatalf("could not encode: %v", err)
-	}
-	fmt.Println("press enter to continue ...")
-	fmt.Scanln()
 }
