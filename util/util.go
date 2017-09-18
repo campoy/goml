@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/gonum/plot/vg"
+
 	"github.com/campoy/tools/imgcat"
 	"github.com/gonum/plot"
 	"github.com/pkg/errors"
@@ -53,13 +55,13 @@ func PrintMatrix(name string, m *mat.Dense) {
 }
 
 // PrintPlot prints a plot to the given encoder.
-func PrintPlot(enc *imgcat.Encoder, p *plot.Plot) {
+func PrintPlot(enc *imgcat.Encoder, p *plot.Plot, width, height vg.Length) {
 	if enc == nil {
 		return
 	}
 
 	wc := enc.Writer()
-	wt, err := p.WriterTo(256, 256, "png")
+	wt, err := p.WriterTo(width, height, "png")
 	if err != nil {
 		log.Fatalf("could not create writer from plot: %v", err)
 	}
