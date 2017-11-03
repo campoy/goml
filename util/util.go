@@ -39,7 +39,7 @@ func ParseMatrix(path string) (mat.Matrix, error) {
 		}
 	}
 
-	return mat.FromSlice(len(recs), len(recs[0]), data)
+	return mat.FromSlice(len(recs), len(recs[0]), data), nil
 }
 
 // PrintPlot prints a plot to the given encoder.
