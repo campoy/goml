@@ -12,9 +12,9 @@ import (
 	"github.com/campoy/goml/linreg"
 	"github.com/campoy/goml/util"
 	"github.com/campoy/tools/imgcat"
-	"github.com/gonum/plot"
-	"github.com/gonum/plot/plotter"
 	"gonum.org/v1/gonum/mat"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
 )
 
 func main() {

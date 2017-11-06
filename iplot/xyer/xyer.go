@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/campoy/mat"
-	"github.com/gonum/plot/plotter"
+	"gonum.org/v1/plot/plotter"
 )
 
 // // FromMatrices returns an XYer from two matrices.

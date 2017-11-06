@@ -3,6 +3,8 @@ package linreg
 import (
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
+
+	mm "github.com/campoy/mat"
 )
 
 // ComputeCost computes the cost of using theta as the parameter for linear
@@ -14,6 +16,11 @@ func ComputeCost(X, y, theta *mat.Dense) float64 {
 	h.Sub(h, y)
 	h.MulElem(h, h)
 	return mat.Sum(h) / float64(2*m)
+}
+
+func ComputeCost(X, y, theta mm.Matrix) float64 {
+	h := mm.Minus(mm.Product(X, theta), y)
+	return mm.Product(h, h).Sum()
 }
 
 // GradientDescent performs gradient descent to learn theta returns the updated

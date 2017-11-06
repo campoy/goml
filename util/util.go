@@ -6,12 +6,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/gonum/plot/vg"
-
 	"github.com/campoy/mat"
 	"github.com/campoy/tools/imgcat"
-	"github.com/gonum/plot"
 	"github.com/pkg/errors"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/vg"
 )
 
 // ParseMatrix parses a CSV encoded file and returns a matrix of float64 values.

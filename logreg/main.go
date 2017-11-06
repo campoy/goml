@@ -11,9 +11,9 @@ import (
 	"github.com/campoy/goml/util"
 	"github.com/campoy/mat"
 	"github.com/campoy/tools/imgcat"
-	"github.com/gonum/plot"
-	"github.com/gonum/plot/plotter"
-	"github.com/gonum/plot/vg/draw"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg/draw"
 )
 
 func main() {
